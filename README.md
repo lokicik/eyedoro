@@ -1,3 +1,5 @@
+I just saw lookaway.app is $20. I thought that was veeeery overpriced. So I've decided to build this:
+
 # 👁️ Eye Doro - Desktop Eye Health App
 
 A beautiful desktop application built with Electron that helps protect your eyes by enforcing regular breaks from screen time.
