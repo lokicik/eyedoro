@@ -97,10 +97,38 @@ select:focus {
 
 /* Common notification popup container */
 .notification-popup-container {
-  width: 100vw;
-  height: 100vh;
+  width: fit-content; /* Size to content instead of full viewport */
+  height: fit-content; /* Size to content instead of full viewport */
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
+  pointer-events: none; /* Make container non-interactive */
+  margin: 0; /* Remove any default margins */
+  padding: 0; /* Remove any default padding */
+}
+
+/* Ensure transparent background for notification popup window */
+body:has(.notification-popup-container),
+#root:has(.notification-popup-container) {
+  background: transparent !important;
+}
+
+/* Alternative approach - direct class on body */
+body.notification-popup-body {
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#root.notification-popup-root {
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100vw !important;
+  height: 100vh !important;
 }

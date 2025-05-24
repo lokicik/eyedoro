@@ -7,6 +7,7 @@ function SettingsScreen({ onThemeChange = null }) {
     workDuration: 20,
     breakDuration: 5,
     notifyBeforeBreak: true,
+    notificationTiming: 30, // seconds before break to show notification
     soundEnabled: true,
     theme: 'light',
     autoStart: false
@@ -42,6 +43,7 @@ function SettingsScreen({ onThemeChange = null }) {
         workDuration: Math.round(savedConfig.workDuration / (60 * 1000)),
         breakDuration: Math.round(savedConfig.breakDuration / (60 * 1000)),
         notifyBeforeBreak: savedConfig.notifyBeforeBreak,
+        notificationTiming: savedConfig.notificationTiming || 30, // default to 30 seconds if not set
         soundEnabled: savedConfig.soundEnabled,
         theme: savedConfig.theme || (savedConfig.darkMode ? 'dark' : 'light'),
         autoStart: savedConfig.autoStart
@@ -134,7 +136,12 @@ function SettingsScreen({ onThemeChange = null }) {
     }
 
     // For duration changes and theme changes, save immediately to prevent race conditions
-    if (key === 'workDuration' || key === 'breakDuration' || key === 'theme') {
+    if (
+      key === 'workDuration' ||
+      key === 'breakDuration' ||
+      key === 'theme' ||
+      key === 'notificationTiming'
+    ) {
       console.log('Saving immediately for:', key, value)
       if (!isReceivingIPCThemeRef.current) {
         saveConfig(newConfig)
@@ -424,9 +431,30 @@ function SettingsScreen({ onThemeChange = null }) {
                 onChange={(e) => handleInputChange('notifyBeforeBreak', e.target.checked)}
               />
               <span className="checkmark"></span>
-              Notify before break starts (30s warning)
+              Notify before break starts ({config.notificationTiming}s warning)
             </label>
           </div>
+
+          {config.notifyBeforeBreak && (
+            <div className="setting-item">
+              <label htmlFor="notification-timing">
+                Notification Timing: {config.notificationTiming} seconds before break
+              </label>
+              <input
+                id="notification-timing"
+                type="range"
+                min="5"
+                max="60"
+                value={config.notificationTiming}
+                onChange={(e) => handleInputChange('notificationTiming', parseInt(e.target.value))}
+                className="slider"
+              />
+              <div className="range-labels">
+                <span>5 sec</span>
+                <span>60 sec</span>
+              </div>
+            </div>
+          )}
 
           <div className="setting-item checkbox-item">
             <label>

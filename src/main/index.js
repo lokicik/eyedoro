@@ -32,6 +32,7 @@ const defaultConfig = {
   workDuration: 20 * 60 * 1000, // 20 minutes in milliseconds
   breakDuration: 5 * 60 * 1000, // 5 minutes in milliseconds
   notifyBeforeBreak: true,
+  notificationTiming: 30, // seconds before break to show notification (5-60 range)
   soundEnabled: true,
   theme: 'light', // Replaced darkMode with theme: 'light', 'dark', 'auto'
   autoStart: false
@@ -386,8 +387,8 @@ function createNotificationWindow() {
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
 
   notificationWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
+    width: 400, // Exact width for the notification card
+    height: 280, // Exact height for the notification card (reduced from 300)
     x: screenWidth - 420, // Position on right side with 20px margin
     y: 50, // 50px from top
     show: false,
@@ -400,7 +401,7 @@ function createNotificationWindow() {
     maximizable: false,
     closable: false,
     transparent: true,
-    hasShadow: true, // Add shadow for better visibility
+    hasShadow: false, // Remove shadow since we want no background at all
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -491,11 +492,13 @@ function startWorkTimer() {
     updateTrayTooltip()
   }, 1000)
 
-  // Set up pre-break notification with enhanced countdown (60 seconds before)
-  if (config.notifyBeforeBreak && config.workDuration > 60000) {
+  // Set up pre-break notification with configurable timing
+  if (config.notifyBeforeBreak && config.workDuration > config.notificationTiming * 1000) {
+    const notificationDelay = config.workDuration - config.notificationTiming * 1000
+
     notificationTimer = setTimeout(() => {
       if (!isPaused && !isBreakActive) {
-        // Calculate actual remaining time instead of hardcoded 60 seconds
+        // Calculate actual remaining time
         const actualRemainingTime = getWorkTimeRemaining()
         const countdownSeconds = Math.max(1, Math.ceil(actualRemainingTime / 1000))
 
@@ -509,7 +512,7 @@ function startWorkTimer() {
           breakDuration: config.breakDuration
         })
       }
-    }, config.workDuration - 60000) // 1 minute before
+    }, notificationDelay)
   }
 
   workTimer = setTimeout(() => {
@@ -966,6 +969,22 @@ ipcMain.handle('save-config', (_, newConfig) => {
       newConfig.notifyBeforeBreak = defaultConfig.notifyBeforeBreak
     }
 
+    // Validate notification timing
+    if (newConfig.notificationTiming !== undefined) {
+      if (
+        typeof newConfig.notificationTiming !== 'number' ||
+        newConfig.notificationTiming < 5 ||
+        newConfig.notificationTiming > 60
+      ) {
+        console.error(
+          'Invalid notification timing received:',
+          newConfig.notificationTiming,
+          'seconds. Using default.'
+        )
+        newConfig.notificationTiming = defaultConfig.notificationTiming
+      }
+    }
+
     if (newConfig.soundEnabled !== undefined && typeof newConfig.soundEnabled !== 'boolean') {
       newConfig.soundEnabled = defaultConfig.soundEnabled
     }
@@ -1011,6 +1030,21 @@ ipcMain.handle('save-config', (_, newConfig) => {
       oldConfig.workDuration !== config.workDuration
     ) {
       console.log('Work duration changed during active work timer, restarting with new duration')
+      clearTimeout(workTimer)
+      clearTimeout(notificationTimer)
+      startWorkTimer()
+    }
+
+    // If work timer is active and notification timing changed, restart with new timing
+    if (
+      workTimer &&
+      !isBreakActive &&
+      !isPaused &&
+      oldConfig.notificationTiming !== config.notificationTiming
+    ) {
+      console.log(
+        'Notification timing changed during active work timer, restarting with new timing'
+      )
       clearTimeout(workTimer)
       clearTimeout(notificationTimer)
       startWorkTimer()
@@ -1167,7 +1201,9 @@ ipcMain.handle('add-time', (_, seconds) => {
       workStartTime = Date.now() - (config.workDuration - newRemaining)
 
       // Set up new notification timer if applicable
-      if (config.notifyBeforeBreak && newRemaining > 60000) {
+      if (config.notifyBeforeBreak && newRemaining > config.notificationTiming * 1000) {
+        const notificationDelay = newRemaining - config.notificationTiming * 1000
+
         notificationTimer = setTimeout(() => {
           if (!isPaused && !isBreakActive) {
             // Calculate actual remaining time for accurate countdown
@@ -1181,7 +1217,7 @@ ipcMain.handle('add-time', (_, seconds) => {
               breakDuration: config.breakDuration
             })
           }
-        }, newRemaining - 60000)
+        }, notificationDelay)
       }
 
       // Set up new work timer

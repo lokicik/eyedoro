@@ -47,6 +47,23 @@ function App() {
     }
   }, [])
 
+  // Set transparent background for notification popup
+  useEffect(() => {
+    if (currentRoute === '#notification-popup') {
+      document.body.classList.add('notification-popup-body')
+      document.getElementById('root')?.classList.add('notification-popup-root')
+    } else {
+      document.body.classList.remove('notification-popup-body')
+      document.getElementById('root')?.classList.remove('notification-popup-root')
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('notification-popup-body')
+      document.getElementById('root')?.classList.remove('notification-popup-root')
+    }
+  }, [currentRoute])
+
   console.log('App rendering with route:', currentRoute)
 
   // Handle different routes
