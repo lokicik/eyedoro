@@ -82,7 +82,7 @@ function showNotification(title, body, icon = null) {
 function updateTrayTooltip() {
   if (!tray) return
 
-  let tooltip = 'Eye Guard - Protecting your eyes'
+  let tooltip = 'Eye Doro - Protecting your eyes'
 
   if (isPaused) {
     tooltip += '\n⏸️ Paused'
@@ -102,29 +102,144 @@ function updateTrayTooltip() {
   tray.setToolTip(tooltip)
 }
 
+// Helper function to show settings window reliably
+async function showSettingsWindow() {
+  // Don't allow settings window to open during breaks
+  if (isBreakActive) {
+    console.log('Settings window blocked - break is active')
+    return false
+  }
+
+  try {
+    console.log('=== SHOW SETTINGS WINDOW CALLED ===')
+    console.log('mainWindow exists:', !!mainWindow)
+    console.log('mainWindow destroyed:', mainWindow ? mainWindow.isDestroyed() : 'N/A')
+
+    // Ensure main window exists and is not destroyed
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.log('Creating new main window...')
+      createWindow()
+
+      // Wait for window to be ready
+      await new Promise((resolve) => {
+        if (mainWindow.webContents.isLoading()) {
+          mainWindow.webContents.once('did-finish-load', resolve)
+        } else {
+          resolve()
+        }
+      })
+      console.log('New window created and loaded')
+    }
+
+    // For Windows, use a more reliable method
+    if (process.platform === 'win32') {
+      // First make sure window is not minimized
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+
+      // Show the window
+      mainWindow.show()
+
+      // Set focus multiple ways for Windows reliability
+      mainWindow.focus()
+      mainWindow.moveTop()
+
+      // Brief flash to ensure visibility
+      setTimeout(() => {
+        mainWindow.flashFrame(true)
+        setTimeout(() => mainWindow.flashFrame(false), 100)
+      }, 50)
+    } else if (process.platform === 'darwin') {
+      // macOS specific
+      app.focus()
+      mainWindow.show()
+      mainWindow.focus()
+    } else {
+      // Linux and others
+      mainWindow.show()
+      mainWindow.focus()
+      mainWindow.setAlwaysOnTop(true)
+      mainWindow.setAlwaysOnTop(false)
+    }
+
+    console.log('Settings window should now be visible')
+    return true
+  } catch (error) {
+    console.error('Error in showSettingsWindow:', error)
+
+    // Last resort: recreate everything
+    try {
+      console.log('Attempting emergency window recreation...')
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy()
+      }
+      createWindow()
+
+      // Wait a bit then try to show
+      setTimeout(() => {
+        mainWindow.show()
+        mainWindow.focus()
+      }, 500)
+
+      return true
+    } catch (retryError) {
+      console.error('Emergency window recreation failed:', retryError)
+      return false
+    }
+  }
+}
+
 function createWindow() {
+  // Get primary display for centering
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+
+  const windowWidth = 900
+  const windowHeight = 650
+
   // Create the main settings window
   mainWindow = new BrowserWindow({
-    width: 500,
-    height: 600,
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.floor((screenWidth - windowWidth) / 2),
+    y: Math.floor((screenHeight - windowHeight) / 2),
     show: false,
     autoHideMenuBar: true,
-    resizable: false,
-    title: 'Eye Guard Settings',
+    resizable: true,
+    minimizable: true,
+    maximizable: false,
+    closable: true,
+    title: 'Eye Doro Settings',
+    webSecurity: false,
     ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'win32'
+      ? {
+          skipTaskbar: false,
+          alwaysOnTop: false
+        }
+      : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webSecurity: false
     }
   })
 
+  // Ensure window shows in taskbar on Windows
+  if (process.platform === 'win32') {
+    mainWindow.setSkipTaskbar(false)
+  }
+
   mainWindow.on('ready-to-show', () => {
-    // Don't show main window on startup, only when accessed from tray
+    console.log('Main window ready to show')
+    // Still don't auto-show on startup
   })
 
   mainWindow.on('close', (event) => {
+    console.log('Main window close event')
     event.preventDefault()
     mainWindow.hide()
   })
@@ -132,6 +247,15 @@ function createWindow() {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  // Add error handling for loading
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Window failed to load:', errorCode, errorDescription)
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Main window finished loading')
   })
 
   // Load the remote URL for development or the local html file for production
@@ -144,6 +268,8 @@ function createWindow() {
 
 function createBreakWindow() {
   const displays = screen.getAllDisplays()
+  console.log('=== CREATING BREAK WINDOWS ===')
+  console.log('Number of displays:', displays.length)
 
   // Clear any existing break windows
   breakWindows.forEach((window) => {
@@ -154,7 +280,14 @@ function createBreakWindow() {
   breakWindows = []
 
   // Create break window for each display
-  displays.forEach((display) => {
+  displays.forEach((display, index) => {
+    console.log(`Creating break window ${index} for display:`, {
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height
+    })
+
     const breakWin = new BrowserWindow({
       x: display.bounds.x,
       y: display.bounds.y,
@@ -177,9 +310,25 @@ function createBreakWindow() {
       }
     })
 
+    // Add event listeners for debugging
+    breakWin.webContents.on('did-finish-load', () => {
+      console.log(`Break window ${index} finished loading`)
+    })
+
+    breakWin.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error(`Break window ${index} failed to load:`, errorCode, errorDescription)
+    })
+
     // Load break screen
+    const breakUrl =
+      is.dev && process.env['ELECTRON_RENDERER_URL']
+        ? process.env['ELECTRON_RENDERER_URL'] + '#break'
+        : join(__dirname, '../renderer/index.html') + '#break'
+
+    console.log(`Loading break URL for window ${index}:`, breakUrl)
+
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      breakWin.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/break')
+      breakWin.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#break')
     } else {
       breakWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'break' })
     }
@@ -187,6 +336,8 @@ function createBreakWindow() {
     // Store all break windows
     breakWindows.push(breakWin)
   })
+
+  console.log(`Created ${breakWindows.length} break windows`)
 }
 
 function createTray() {
@@ -196,9 +347,9 @@ function createTray() {
   updateTrayMenu()
   updateTrayTooltip()
 
-  tray.on('double-click', () => {
-    mainWindow.show()
-    mainWindow.focus()
+  tray.on('double-click', async () => {
+    console.log('Tray double-clicked')
+    await showSettingsWindow()
   })
 }
 
@@ -211,11 +362,15 @@ function startWorkTimer() {
 
   workStartTime = Date.now()
   console.log(
-    'Work timer started at:',
+    '=== WORK TIMER STARTED ===',
+    '\nTime:',
     new Date(workStartTime).toLocaleTimeString(),
-    'Duration:',
-    config.workDuration / 1000,
-    'seconds'
+    '\nDuration (ms):',
+    config.workDuration,
+    '\nDuration (min):',
+    config.workDuration / (60 * 1000),
+    '\nTarget end time:',
+    new Date(workStartTime + config.workDuration).toLocaleTimeString()
   )
 
   // Update tooltip every second
@@ -242,6 +397,7 @@ function startWorkTimer() {
   workTimer = setTimeout(() => {
     clearInterval(tooltipUpdateInterval)
     if (!isPaused) {
+      console.log('Work timer completed, starting break')
       startBreak()
     }
   }, config.workDuration)
@@ -253,6 +409,12 @@ function startBreak() {
   isBreakActive = true
   breakStartTime = Date.now()
   workStartTime = null
+
+  // Hide settings window if it's open
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+    console.log('Hiding settings window for break')
+    mainWindow.hide()
+  }
 
   // Show break notification
   showNotification(
@@ -361,6 +523,11 @@ function endBreak() {
   updateTrayMenu()
 
   // Start next work cycle
+  console.log(
+    'Starting next work cycle with updated config:',
+    config.workDuration / (60 * 1000),
+    'minutes'
+  )
   startWorkTimer()
 }
 
@@ -375,10 +542,10 @@ function togglePause() {
     if (isBreakActive) {
       endBreak()
     }
-    showNotification('⏸️ Eye Guard Paused', 'Break reminders are temporarily disabled.')
+    showNotification('⏸️ Eye Doro Paused', 'Break reminders are temporarily disabled.')
   } else {
     startWorkTimer()
-    showNotification('▶️ Eye Guard Resumed', 'Break reminders are now active.')
+    showNotification('▶️ Eye Doro Resumed', 'Break reminders are now active.')
   }
 
   updateTrayMenu()
@@ -388,7 +555,7 @@ function togglePause() {
 function updateTrayMenu() {
   const menuItems = [
     {
-      label: 'Eye Guard',
+      label: 'Eye Doro',
       type: 'normal',
       enabled: false
     },
@@ -398,7 +565,7 @@ function updateTrayMenu() {
   ]
 
   if (isBreakActive) {
-    // During break - show end break option
+    // During break - show end break option only
     menuItems.push({
       label: '🏃 End Break Early',
       type: 'normal',
@@ -419,17 +586,19 @@ function updateTrayMenu() {
       type: 'normal',
       click: startBreak
     })
+
+    // Settings only available when not in break
+    menuItems.push({
+      label: 'Settings',
+      type: 'normal',
+      click: async () => {
+        console.log('Settings menu clicked')
+        await showSettingsWindow()
+      }
+    })
   }
 
   menuItems.push(
-    {
-      label: 'Settings',
-      type: 'normal',
-      click: () => {
-        mainWindow.show()
-        mainWindow.focus()
-      }
-    },
     {
       type: 'separator'
     },
@@ -501,8 +670,60 @@ ipcMain.handle('get-config', () => {
 })
 
 ipcMain.handle('save-config', (_, newConfig) => {
+  const oldConfig = { ...config }
   config = { ...config, ...newConfig }
   saveConfig()
+
+  console.log('=== CONFIG SAVED ===')
+  console.log('Old work duration:', oldConfig.workDuration / (60 * 1000), 'minutes')
+  console.log('New work duration:', config.workDuration / (60 * 1000), 'minutes')
+  console.log(
+    'Current state - isBreakActive:',
+    isBreakActive,
+    'isPaused:',
+    isPaused,
+    'workTimer:',
+    !!workTimer
+  )
+
+  // If work timer is active and work duration changed, restart with new duration
+  if (workTimer && !isBreakActive && !isPaused && oldConfig.workDuration !== config.workDuration) {
+    console.log('Work duration changed during active work timer, restarting with new duration')
+    clearTimeout(workTimer)
+    clearTimeout(notificationTimer)
+    startWorkTimer()
+  }
+
+  // If we're currently in a break and work duration changed, the change will apply to next work cycle
+  // No action needed here as startWorkTimer() will be called with new config when break ends
+  if (isBreakActive && oldConfig.workDuration !== config.workDuration) {
+    console.log('Work duration changed during break - will apply to next work cycle')
+  }
+
+  // If break timer is active and break duration changed, restart with new duration
+  if (breakTimer && isBreakActive && oldConfig.breakDuration !== config.breakDuration) {
+    console.log('Break duration changed during active break, restarting with new duration')
+    clearTimeout(breakTimer)
+
+    // Update break tooltip interval
+    const breakTooltipInterval = setInterval(() => {
+      if (!isBreakActive) {
+        clearInterval(breakTooltipInterval)
+        return
+      }
+      updateTrayTooltip()
+    }, 1000)
+
+    breakTimer = setTimeout(() => {
+      clearInterval(breakTooltipInterval)
+      endBreak()
+    }, config.breakDuration)
+  }
+
+  // Update tray tooltip to reflect new settings
+  updateTrayTooltip()
+
+  console.log('Config save completed')
   return config
 })
 
@@ -579,7 +800,7 @@ ipcMain.handle('force-close-break-windows', () => {
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.eyeguard')
+  electronApp.setAppUserModelId('com.eyedoro')
 
   // Load configuration
   loadConfig()

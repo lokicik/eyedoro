@@ -58,6 +58,10 @@ function BreakScreen() {
     }
   }
 
+  const handleTipNavigation = (tipIndex) => {
+    setCurrentTip(tipIndex)
+  }
+
   useEffect(() => {
     // Get initial break duration from config
     const initializeBreakTime = async () => {
@@ -93,6 +97,12 @@ function BreakScreen() {
       if (event.key === 'Escape') {
         console.log('ESC key detected - attempting to end break')
         handleEndBreakEarly()
+      } else if (event.key === 'ArrowRight') {
+        // Navigate to next tip
+        setCurrentTip((prev) => (prev + 1) % eyeHealthTips.length)
+      } else if (event.key === 'ArrowLeft') {
+        // Navigate to previous tip
+        setCurrentTip((prev) => (prev - 1 + eyeHealthTips.length) % eyeHealthTips.length)
       }
     }
 
@@ -154,7 +164,11 @@ function BreakScreen() {
             </div>
             <div className="tip-indicator">
               {eyeHealthTips.map((_, index) => (
-                <div key={index} className={`tip-dot ${index === currentTip ? 'active' : ''}`} />
+                <div
+                  key={index}
+                  className={`tip-dot ${index === currentTip ? 'active' : ''}`}
+                  onClick={() => handleTipNavigation(index)}
+                />
               ))}
             </div>
           </div>
@@ -181,7 +195,8 @@ function BreakScreen() {
           <div className="break-footer">
             <p className="emergency-text">
               Press <kbd>ESC</kbd> or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> +{' '}
-              <kbd>E</kbd> to exit
+              <kbd>E</kbd> to exit • Use <kbd>←</kbd> <kbd>→</kbd> arrows or click dots to navigate
+              tips
             </p>
             <div className="break-progress">
               <div className="progress-bar">

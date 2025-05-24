@@ -132,7 +132,7 @@ function SettingsScreen() {
   return (
     <div className={`settings-container ${config.darkMode ? 'dark' : ''}`}>
       <div className="settings-header">
-        <h1>👁️ Eye Guard Settings</h1>
+        <h1>👁️ Eye Doro Settings</h1>
         <p>Protect your eyes with regular breaks</p>
       </div>
 
