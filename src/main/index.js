@@ -17,6 +17,7 @@ import path from 'path'
 
 let mainWindow = null
 let breakWindows = [] // Array to store all break windows for multiple displays
+let notificationWindow = null // Independent notification popup window
 let tray = null
 let workTimer = null
 let breakTimer = null
@@ -367,6 +368,92 @@ function createTray() {
   })
 }
 
+// Create independent notification popup window
+function createNotificationWindow() {
+  if (notificationWindow && !notificationWindow.isDestroyed()) {
+    return notificationWindow
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+
+  notificationWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    x: screenWidth - 420, // Position on right side with 20px margin
+    y: 50, // 50px from top
+    show: false,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: true, // Allow moving the notification
+    minimizable: false,
+    maximizable: false,
+    closable: false,
+    transparent: true,
+    hasShadow: true, // Add shadow for better visibility
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  })
+
+  // Load notification popup page
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    notificationWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#notification-popup')
+  } else {
+    notificationWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      hash: 'notification-popup'
+    })
+  }
+
+  notificationWindow.on('closed', () => {
+    notificationWindow = null
+  })
+
+  return notificationWindow
+}
+
+// Show notification popup with data
+function showNotificationPopup(data) {
+  console.log('Showing independent notification popup:', data)
+
+  try {
+    const popup = createNotificationWindow()
+
+    const handleLoadComplete = () => {
+      try {
+        // Send notification data to the popup window
+        popup.webContents.send('notification-data', data)
+        popup.show()
+        popup.focus()
+      } catch (error) {
+        console.error('Error sending data to notification popup:', error)
+      }
+    }
+
+    popup.webContents.once('did-finish-load', handleLoadComplete)
+
+    if (!popup.webContents.isLoading()) {
+      handleLoadComplete()
+    }
+  } catch (error) {
+    console.error('Error showing notification popup:', error)
+    // Fallback to system notification
+    showNotification('👁️ Eye Break Time!', 'Time for a break to rest your eyes.')
+  }
+}
+
+// Hide all notification windows
+function hideNotificationWindows() {
+  if (notificationWindow && !notificationWindow.isDestroyed()) {
+    notificationWindow.hide()
+  }
+}
+
 function startWorkTimer() {
   if (isPaused || isBreakActive) return
 
@@ -396,22 +483,37 @@ function startWorkTimer() {
     updateTrayTooltip()
   }, 1000)
 
-  // Show notification 30 seconds before break if enabled
-  if (config.notifyBeforeBreak && config.workDuration > 30000) {
+  // Set up pre-break notification with enhanced countdown (60 seconds before)
+  if (config.notifyBeforeBreak && config.workDuration > 60000) {
     notificationTimer = setTimeout(() => {
       if (!isPaused && !isBreakActive) {
-        showNotification(
-          '👁️ Eye Break Coming Soon!',
-          "Your break will start in 30 seconds. Finish up what you're doing."
-        )
+        // Calculate actual remaining time instead of hardcoded 60 seconds
+        const actualRemainingTime = getWorkTimeRemaining()
+        const countdownSeconds = Math.max(1, Math.ceil(actualRemainingTime / 1000))
+
+        console.log('Showing pre-break warning with actual countdown:', countdownSeconds, 'seconds')
+
+        // Send enhanced notification to renderer
+        sendNotificationToRenderer({
+          type: 'pre-break-warning',
+          countdown: countdownSeconds,
+          workDuration: config.workDuration,
+          breakDuration: config.breakDuration
+        })
       }
-    }, config.workDuration - 30000)
+    }, config.workDuration - 60000) // 1 minute before
   }
 
   workTimer = setTimeout(() => {
     clearInterval(tooltipUpdateInterval)
     if (!isPaused) {
       console.log('Work timer completed, starting break')
+
+      // Notify renderer that break is starting
+      sendNotificationToRenderer({
+        type: 'break-starting'
+      })
+
       startBreak()
     }
   }, config.workDuration)
@@ -529,6 +631,11 @@ function endBreak() {
   // Show break end notification
   showNotification('✅ Break Complete!', 'Great job! Back to work with refreshed eyes.')
 
+  // Send break complete notification to renderer
+  sendNotificationToRenderer({
+    type: 'break-complete'
+  })
+
   // Re-register global shortcuts
   registerGlobalShortcuts()
 
@@ -643,20 +750,11 @@ function updateTrayMenu() {
         app.isQuiting = true
 
         // Clear all timers
-        if (workTimer) {
-          clearTimeout(workTimer)
-          workTimer = null
-        }
-        if (breakTimer) {
-          clearTimeout(breakTimer)
-          breakTimer = null
-        }
-        if (notificationTimer) {
-          clearTimeout(notificationTimer)
-          notificationTimer = null
-        }
+        if (workTimer) clearTimeout(workTimer)
+        if (breakTimer) clearTimeout(breakTimer)
+        if (notificationTimer) clearTimeout(notificationTimer)
 
-        // Close all break windows
+        // Close break windows
         breakWindows.forEach((window, index) => {
           if (window && !window.isDestroyed()) {
             try {
@@ -752,73 +850,120 @@ ipcMain.handle('get-config', () => {
 })
 
 ipcMain.handle('save-config', (_, newConfig) => {
-  const oldConfig = { ...config }
+  try {
+    if (!newConfig || typeof newConfig !== 'object') {
+      throw new Error('Invalid config object')
+    }
 
-  // Validate work and break durations before saving
-  if (newConfig.workDuration && newConfig.workDuration < 60000) {
-    console.error('Invalid work duration received:', newConfig.workDuration, 'ms. Using default.')
-    newConfig.workDuration = defaultConfig.workDuration
-  }
+    const oldConfig = { ...config }
 
-  if (newConfig.breakDuration && newConfig.breakDuration < 30000) {
-    console.error('Invalid break duration received:', newConfig.breakDuration, 'ms. Using default.')
-    newConfig.breakDuration = defaultConfig.breakDuration
-  }
-
-  config = { ...config, ...newConfig }
-  saveConfig()
-
-  console.log('=== CONFIG SAVED ===')
-  console.log('Old work duration:', oldConfig.workDuration / (60 * 1000), 'minutes')
-  console.log('New work duration:', config.workDuration / (60 * 1000), 'minutes')
-  console.log(
-    'Current state - isBreakActive:',
-    isBreakActive,
-    'isPaused:',
-    isPaused,
-    'workTimer:',
-    !!workTimer
-  )
-
-  // If work timer is active and work duration changed, restart with new duration
-  if (workTimer && !isBreakActive && !isPaused && oldConfig.workDuration !== config.workDuration) {
-    console.log('Work duration changed during active work timer, restarting with new duration')
-    clearTimeout(workTimer)
-    clearTimeout(notificationTimer)
-    startWorkTimer()
-  }
-
-  // If we're currently in a break and work duration changed, the change will apply to next work cycle
-  // No action needed here as startWorkTimer() will be called with new config when break ends
-  if (isBreakActive && oldConfig.workDuration !== config.workDuration) {
-    console.log('Work duration changed during break - will apply to next work cycle')
-  }
-
-  // If break timer is active and break duration changed, restart with new duration
-  if (breakTimer && isBreakActive && oldConfig.breakDuration !== config.breakDuration) {
-    console.log('Break duration changed during active break, restarting with new duration')
-    clearTimeout(breakTimer)
-
-    // Update break tooltip interval
-    const breakTooltipInterval = setInterval(() => {
-      if (!isBreakActive) {
-        clearInterval(breakTooltipInterval)
-        return
+    // Validate work and break durations before saving
+    if (newConfig.workDuration !== undefined) {
+      if (typeof newConfig.workDuration !== 'number' || newConfig.workDuration < 60000) {
+        console.error(
+          'Invalid work duration received:',
+          newConfig.workDuration,
+          'ms. Using default.'
+        )
+        newConfig.workDuration = defaultConfig.workDuration
       }
-      updateTrayTooltip()
-    }, 1000)
+    }
 
-    breakTimer = setTimeout(() => {
-      clearInterval(breakTooltipInterval)
-      endBreak()
-    }, config.breakDuration)
+    if (newConfig.breakDuration !== undefined) {
+      if (typeof newConfig.breakDuration !== 'number' || newConfig.breakDuration < 30000) {
+        console.error(
+          'Invalid break duration received:',
+          newConfig.breakDuration,
+          'ms. Using default.'
+        )
+        newConfig.breakDuration = defaultConfig.breakDuration
+      }
+    }
+
+    // Validate boolean fields
+    if (
+      newConfig.notifyBeforeBreak !== undefined &&
+      typeof newConfig.notifyBeforeBreak !== 'boolean'
+    ) {
+      newConfig.notifyBeforeBreak = defaultConfig.notifyBeforeBreak
+    }
+
+    if (newConfig.soundEnabled !== undefined && typeof newConfig.soundEnabled !== 'boolean') {
+      newConfig.soundEnabled = defaultConfig.soundEnabled
+    }
+
+    if (newConfig.autoStart !== undefined && typeof newConfig.autoStart !== 'boolean') {
+      newConfig.autoStart = defaultConfig.autoStart
+    }
+
+    // Validate theme
+    if (newConfig.theme !== undefined && !['light', 'dark', 'auto'].includes(newConfig.theme)) {
+      newConfig.theme = defaultConfig.theme
+    }
+
+    config = { ...config, ...newConfig }
+    saveConfig()
+
+    console.log('=== CONFIG SAVED ===')
+    console.log('Old work duration:', oldConfig.workDuration / (60 * 1000), 'minutes')
+    console.log('New work duration:', config.workDuration / (60 * 1000), 'minutes')
+    console.log(
+      'Current state - isBreakActive:',
+      isBreakActive,
+      'isPaused:',
+      isPaused,
+      'workTimer:',
+      !!workTimer
+    )
+
+    // If work timer is active and work duration changed, restart with new duration
+    if (
+      workTimer &&
+      !isBreakActive &&
+      !isPaused &&
+      oldConfig.workDuration !== config.workDuration
+    ) {
+      console.log('Work duration changed during active work timer, restarting with new duration')
+      clearTimeout(workTimer)
+      clearTimeout(notificationTimer)
+      startWorkTimer()
+    }
+
+    // If we're currently in a break and work duration changed, the change will apply to next work cycle
+    // No action needed here as startWorkTimer() will be called with new config when break ends
+    if (isBreakActive && oldConfig.workDuration !== config.workDuration) {
+      console.log('Work duration changed during break - will apply to next work cycle')
+    }
+
+    // If break timer is active and break duration changed, restart with new duration
+    if (breakTimer && isBreakActive && oldConfig.breakDuration !== config.breakDuration) {
+      console.log('Break duration changed during active break, restarting with new duration')
+      clearTimeout(breakTimer)
+
+      // Update break tooltip interval
+      const breakTooltipInterval = setInterval(() => {
+        if (!isBreakActive) {
+          clearInterval(breakTooltipInterval)
+          return
+        }
+        updateTrayTooltip()
+      }, 1000)
+
+      breakTimer = setTimeout(() => {
+        clearInterval(breakTooltipInterval)
+        endBreak()
+      }, config.breakDuration)
+    }
+
+    // Update tray tooltip to reflect new settings
+    updateTrayTooltip()
+
+    console.log('Config save completed')
+    return { success: true, config }
+  } catch (error) {
+    console.error('Error saving config:', error)
+    return { success: false, error: error.message, config }
   }
-
-  // Update tray tooltip to reflect new settings
-  updateTrayTooltip()
-
-  console.log('Config save completed')
-  return config
 })
 
 ipcMain.handle('get-break-time-remaining', () => {
@@ -891,6 +1036,168 @@ ipcMain.handle('force-close-break-windows', () => {
   console.log('All break windows force destroyed')
   return true
 })
+
+// Enhanced notification system handlers
+ipcMain.handle('start-break-now', () => {
+  console.log('=== START BREAK NOW ===')
+  try {
+    if (workTimer) {
+      clearTimeout(workTimer)
+      clearTimeout(notificationTimer)
+    }
+
+    // Clear any existing notification popups
+    sendNotificationToRenderer({
+      type: 'hide-notifications'
+    })
+
+    startBreak()
+    return { success: true }
+  } catch (error) {
+    console.error('Error starting break now:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('add-time', (_, seconds) => {
+  console.log(`=== ADD TIME: ${seconds} seconds ===`)
+
+  try {
+    if (!seconds || typeof seconds !== 'number' || seconds <= 0) {
+      throw new Error('Invalid seconds value')
+    }
+
+    if (workTimer && !isBreakActive) {
+      // Extend the current work timer
+      clearTimeout(workTimer)
+      clearTimeout(notificationTimer)
+
+      // Add time to the work session
+      const currentRemaining = getWorkTimeRemaining()
+      const newRemaining = currentRemaining + seconds * 1000
+
+      // Restart timer with extended time
+      workStartTime = Date.now() - (config.workDuration - newRemaining)
+
+      // Set up new notification timer if applicable
+      if (config.notifyBeforeBreak && newRemaining > 60000) {
+        notificationTimer = setTimeout(() => {
+          if (!isPaused && !isBreakActive) {
+            // Calculate actual remaining time for accurate countdown
+            const actualRemainingTime = getWorkTimeRemaining()
+            const countdownSeconds = Math.max(1, Math.ceil(actualRemainingTime / 1000))
+
+            sendNotificationToRenderer({
+              type: 'pre-break-warning',
+              countdown: countdownSeconds,
+              workDuration: config.workDuration,
+              breakDuration: config.breakDuration
+            })
+          }
+        }, newRemaining - 60000)
+      }
+
+      // Set up new work timer
+      workTimer = setTimeout(() => {
+        if (!isPaused) {
+          console.log('Extended work timer completed, starting break')
+          startBreak()
+        }
+      }, newRemaining)
+
+      updateTrayTooltip()
+
+      // Hide notification popup
+      sendNotificationToRenderer({
+        type: 'hide-notifications'
+      })
+
+      showNotification(
+        '⏰ Time Extended',
+        `Added ${Math.round(seconds / 60)} minute${seconds >= 120 ? 's' : ''} to your work session.`
+      )
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error adding time:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('skip-break', () => {
+  console.log('=== SKIP BREAK ===')
+
+  try {
+    // Clear any timers
+    if (workTimer) {
+      clearTimeout(workTimer)
+    }
+    if (notificationTimer) {
+      clearTimeout(notificationTimer)
+    }
+
+    // Hide notification popup
+    sendNotificationToRenderer({
+      type: 'hide-notifications'
+    })
+
+    // Show notification about skipped break
+    showNotification('⏭️ Break Skipped', 'Break reminder skipped. Starting next work cycle.')
+
+    // Start next work cycle
+    startWorkTimer()
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error skipping break:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// Close notification windows
+ipcMain.handle('close-notifications', () => {
+  hideNotificationWindows()
+  return true
+})
+
+// Close specific notification popup
+ipcMain.handle('close-notification-popup', () => {
+  if (notificationWindow && !notificationWindow.isDestroyed()) {
+    notificationWindow.hide()
+  }
+  return true
+})
+
+// Function to send notifications to independent notification windows
+function sendNotificationToRenderer(data) {
+  console.log('Sending notification to independent windows:', data)
+
+  switch (data.type) {
+    case 'pre-break-warning':
+      // Show notification popup
+      showNotificationPopup({
+        type: 'pre-break-warning',
+        countdown: data.countdown,
+        workDuration: data.workDuration,
+        breakDuration: data.breakDuration
+      })
+      break
+
+    case 'break-starting':
+    case 'break-complete':
+    case 'hide-notifications':
+      hideNotificationWindows()
+      break
+
+    default:
+      // For any other notifications, try to send to main window if available
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('show-notification', data)
+      }
+      break
+  }
+}
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
@@ -969,6 +1276,15 @@ app.on('before-quit', (event) => {
         }
       }
     })
+
+    // Close notification windows
+    if (notificationWindow && !notificationWindow.isDestroyed()) {
+      try {
+        notificationWindow.destroy()
+      } catch (error) {
+        console.error('Error destroying notification window on quit:', error)
+      }
+    }
   }
 
   globalShortcut.unregisterAll()

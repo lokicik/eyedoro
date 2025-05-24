@@ -74,3 +74,33 @@ select:focus {
     opacity: 1;
   }
 }
+
+/* App.css */
+
+/* Full screen container for various routes */
+.fullscreen-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+/* Transparent full screen for floating elements */
+.transparent-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Common notification popup container */
+.notification-popup-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}

@@ -18,6 +18,29 @@ const api = {
   closeWindow: () => ipcRenderer.invoke('close-window'),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
 
+  // Notification system (legacy - for main window)
+  onNotification: (callback) => {
+    ipcRenderer.on('show-notification', callback)
+  },
+  removeNotificationListener: (callback) => {
+    ipcRenderer.removeListener('show-notification', callback)
+  },
+
+  // Independent notification windows
+  onNotificationData: (callback) => {
+    ipcRenderer.on('notification-data', callback)
+  },
+  removeNotificationDataListener: (callback) => {
+    ipcRenderer.removeListener('notification-data', callback)
+  },
+
+  // Notification actions
+  startBreakNow: () => ipcRenderer.invoke('start-break-now'),
+  addTime: (seconds) => ipcRenderer.invoke('add-time', seconds),
+  skipBreak: () => ipcRenderer.invoke('skip-break'),
+  closeNotifications: () => ipcRenderer.invoke('close-notifications'),
+  closeNotificationPopup: () => ipcRenderer.invoke('close-notification-popup'),
+
   // Route detection for break screen
   getRoute: () => {
     return window.location.hash
@@ -31,10 +54,12 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('electronAPI', api) // Also expose as electronAPI for compatibility
   } catch (error) {
     console.error(error)
   }
 } else {
   window.electron = electronAPI
   window.api = api
+  window.electronAPI = api
 }

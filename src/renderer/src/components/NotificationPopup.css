@@ -1,0 +1,233 @@
+.notification-popup {
+  position: relative;
+  pointer-events: all;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-content {
+  /* background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); */
+  background: transparent;
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 320px;
+  max-width: 400px;
+  /* box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.2); */
+  /* border: 1px solid rgba(255, 255, 255, 0.1); */
+  /* backdrop-filter: blur(10px); */
+  color: white;
+  animation: slideInUp 0.3s ease-out;
+  position: relative;
+}
+
+.notification-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: transparent;
+  border-radius: 16px 16px 0 0;
+  cursor: move;
+  -webkit-app-region: drag;
+  z-index: 10;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notification-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 5;
+}
+
+.notification-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ff6b9d, #c44569);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-text h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.notification-text p {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.notification-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  position: relative;
+  z-index: 5;
+}
+
+.notification-actions .btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  -webkit-app-region: no-drag;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #5a6fd8, #6a3d91);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Grid layout for the bottom buttons */
+.notification-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto auto;
+  gap: 8px;
+}
+
+.notification-actions .btn:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Small buttons on second row */
+.notification-actions .btn:nth-child(2),
+.notification-actions .btn:nth-child(3) {
+  grid-row: 2;
+}
+
+.notification-actions .btn:nth-child(2) {
+  grid-column: 1;
+}
+
+.notification-actions .btn:nth-child(3) {
+  grid-column: 1;
+  margin-top: 0;
+}
+
+.notification-actions .btn:nth-child(4) {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+/* Better layout for smaller buttons */
+@media (min-width: 350px) {
+  .notification-actions {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .notification-actions .btn:nth-child(1) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .notification-actions .btn:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .notification-actions .btn:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+  }
+
+  .notification-actions .btn:nth-child(4) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+/* Close button styles */
+.close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 18px;
+  font-weight: bold;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 15;
+  -webkit-app-region: no-drag;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: white;
+  transform: scale(1.05);
+}

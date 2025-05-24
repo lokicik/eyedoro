@@ -4,6 +4,7 @@ import SettingsScreen from './SettingsScreen'
 
 function BreakScreen() {
   const [timeRemaining, setTimeRemaining] = useState(300) // 5 minutes default
+  const [totalBreakTime, setTotalBreakTime] = useState(300) // Track total break duration
   const [currentTip, setCurrentTip] = useState(0)
   const [theme, setTheme] = useState('light') // Changed from isDarkMode to theme
   const [showSettings, setShowSettings] = useState(false)
@@ -148,10 +149,13 @@ function BreakScreen() {
     const initializeBreakTime = async () => {
       try {
         const time = await window.api.getBreakTimeRemaining()
+        const config = await window.api.getConfig()
+
         setTimeRemaining(Math.floor(time / 1000))
+        // Set total break time from config (convert from milliseconds to seconds)
+        setTotalBreakTime(Math.floor(config.breakDuration / 1000))
 
         // Get theme setting
-        const config = await window.api.getConfig()
         setTheme(config.theme || (config.darkMode ? 'dark' : 'light')) // Handle migration from old darkMode
       } catch (error) {
         console.error('Error getting break time or config:', error)
@@ -213,7 +217,7 @@ function BreakScreen() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
-  const progressPercentage = ((300 - timeRemaining) / 300) * 100
+  const progressPercentage = ((totalBreakTime - timeRemaining) / totalBreakTime) * 100
 
   return (
     <div className={`break-screen ${getThemeClasses()}`}>
