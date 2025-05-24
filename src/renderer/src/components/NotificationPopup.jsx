@@ -12,10 +12,93 @@ const NotificationPopup = ({
   position = { x: 0, y: 0 }
 }) => {
   const [timeLeft, setTimeLeft] = useState(countdown)
+  const [theme, setTheme] = useState('light')
 
   useEffect(() => {
     setTimeLeft(countdown)
   }, [countdown])
+
+  // Load initial theme from config
+  useEffect(() => {
+    const loadInitialTheme = async () => {
+      try {
+        const config = await window.api?.getConfig?.()
+        if (config) {
+          setTheme(config.theme || 'light')
+        }
+      } catch (error) {
+        console.error('Error loading initial theme:', error)
+      }
+    }
+
+    loadInitialTheme()
+  }, [])
+
+  // Listen for theme changes from main process (IPC)
+  useEffect(() => {
+    const handleThemeChangedIPC = (event, data) => {
+      console.log('NotificationPopup received theme change from IPC:', data.theme)
+      setTheme(data.theme)
+    }
+
+    // Listen for IPC theme changes
+    if (window.api?.onThemeChanged) {
+      window.api.onThemeChanged(handleThemeChangedIPC)
+    }
+
+    return () => {
+      // Remove IPC listener
+      if (window.api?.removeThemeChangedListener) {
+        window.api.removeThemeChangedListener(handleThemeChangedIPC)
+      }
+    }
+  }, [])
+
+  // Helper function to determine the actual theme to use
+  const getEffectiveTheme = () => {
+    if (theme === 'auto') {
+      // Auto mode: use system preference or default to light
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+    }
+    return theme
+  }
+
+  // Helper function to get theme classes
+  const getThemeClasses = () => {
+    const effectiveTheme = getEffectiveTheme()
+
+    // For dark-based themes, always include 'dark' class
+    const darkThemes = ['dark', 'ocean', 'forest', 'sunset', 'midnight']
+    const isDarkBased = darkThemes.includes(effectiveTheme)
+
+    let classes = 'notification-popup'
+    if (isDarkBased) {
+      classes += ' dark'
+    }
+
+    // Add specific theme class if it's not the basic light/dark
+    if (!['light', 'dark'].includes(effectiveTheme)) {
+      classes += ` theme-${effectiveTheme}`
+    }
+
+    return classes
+  }
+
+  // Listen for system theme changes when in auto mode
+  useEffect(() => {
+    if (theme === 'auto' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const handleThemeChange = () => {
+        // Force a re-render by updating theme state
+        setTheme((prev) => (prev === 'auto' ? 'auto' : prev))
+      }
+
+      mediaQuery.addEventListener('change', handleThemeChange)
+      return () => mediaQuery.removeEventListener('change', handleThemeChange)
+    }
+  }, [theme])
 
   useEffect(() => {
     if (!isVisible) return
@@ -67,7 +150,7 @@ const NotificationPopup = ({
   if (!isVisible) return null
 
   return (
-    <div className="notification-popup">
+    <div className={getThemeClasses()}>
       <div className="notification-content">
         <div className="notification-header">
           <div className="notification-icon">👁️</div>

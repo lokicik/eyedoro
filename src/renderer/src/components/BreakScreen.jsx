@@ -83,6 +83,12 @@ function BreakScreen() {
     setShowSettings(!showSettings)
   }
 
+  // Handle immediate theme change from embedded settings
+  const handleThemeChangeFromSettings = (newTheme) => {
+    console.log('BreakScreen: Received immediate theme change from embedded settings:', newTheme)
+    setTheme(newTheme)
+  }
+
   // Helper function to determine the actual theme to use
   const getEffectiveTheme = () => {
     if (theme === 'auto') {
@@ -136,11 +142,32 @@ function BreakScreen() {
       setTheme(event.detail.theme)
     }
 
-    // Listen for custom theme change events
+    // Listen for theme changes from main process (IPC)
+    const handleThemeChangedIPC = (event, data) => {
+      console.log('Break screen received theme change from IPC:', data.theme)
+      console.log('Current theme state before change:', theme)
+      setTheme(data.theme)
+      console.log('Theme state should now be:', data.theme)
+    }
+
+    // Listen for custom theme change events (local window events)
     window.addEventListener('themeChange', handleThemeChangeEvent)
+
+    // Listen for IPC theme changes
+    if (window.api?.onThemeChanged) {
+      console.log('Break screen: Setting up IPC theme listener')
+      window.api.onThemeChanged(handleThemeChangedIPC)
+    } else {
+      console.warn('Break screen: window.api.onThemeChanged not available')
+    }
 
     return () => {
       window.removeEventListener('themeChange', handleThemeChangeEvent)
+
+      // Remove IPC listener
+      if (window.api?.removeThemeChangedListener) {
+        window.api.removeThemeChangedListener(handleThemeChangedIPC)
+      }
     }
   }, [])
 
@@ -151,12 +178,17 @@ function BreakScreen() {
         const time = await window.api.getBreakTimeRemaining()
         const config = await window.api.getConfig()
 
+        console.log('Break screen: Loaded config:', config)
+        console.log('Break screen: Config theme:', config.theme)
+
         setTimeRemaining(Math.floor(time / 1000))
         // Set total break time from config (convert from milliseconds to seconds)
         setTotalBreakTime(Math.floor(config.breakDuration / 1000))
 
         // Get theme setting
-        setTheme(config.theme || (config.darkMode ? 'dark' : 'light')) // Handle migration from old darkMode
+        const initialTheme = config.theme || (config.darkMode ? 'dark' : 'light') // Handle migration from old darkMode
+        console.log('Break screen: Setting initial theme to:', initialTheme)
+        setTheme(initialTheme)
       } catch (error) {
         console.error('Error getting break time or config:', error)
       }
@@ -230,7 +262,7 @@ function BreakScreen() {
               </button>
             </div>
             <div className="settings-wrapper">
-              <SettingsScreen />
+              <SettingsScreen onThemeChange={handleThemeChangeFromSettings} />
             </div>
           </div>
         ) : (

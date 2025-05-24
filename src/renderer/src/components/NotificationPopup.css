@@ -226,8 +226,118 @@
 }
 
 .close-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Dark theme styles */
+.notification-popup.dark .notification-content {
+  background: rgba(40, 40, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.notification-popup.dark .notification-text h3 {
+  color: #f0f0f0;
+}
+
+.notification-popup.dark .notification-text p {
+  color: rgba(240, 240, 240, 0.9);
+}
+
+.notification-popup.dark .btn-primary {
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+}
+
+.notification-popup.dark .btn-primary:hover {
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+}
+
+.notification-popup.dark .btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f0f0f0;
+}
+
+.notification-popup.dark .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  color: white;
-  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.notification-popup.dark .btn-outline {
+  color: rgba(240, 240, 240, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.notification-popup.dark .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f0f0f0;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.notification-popup.dark .close-button {
+  color: rgba(240, 240, 240, 0.8);
+}
+
+.notification-popup.dark .close-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f0f0f0;
+}
+
+/* Theme variants */
+
+/* Ocean Blue Theme */
+.notification-popup.theme-ocean .notification-content {
+  background: rgba(0, 119, 190, 0.95);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.notification-popup.theme-ocean .btn-primary {
+  background: linear-gradient(135deg, #0077be, #005c96);
+}
+
+.notification-popup.theme-ocean .btn-primary:hover {
+  background: linear-gradient(135deg, #005c96, #004a7a);
+}
+
+/* Forest Green Theme */
+.notification-popup.theme-forest .notification-content {
+  background: rgba(45, 80, 22, 0.95);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+.notification-popup.theme-forest .btn-primary {
+  background: linear-gradient(135deg, #2d5016, #1a3009);
+}
+
+.notification-popup.theme-forest .btn-primary:hover {
+  background: linear-gradient(135deg, #1a3009, #0d1804);
+}
+
+/* Sunset Orange Theme */
+.notification-popup.theme-sunset .notification-content {
+  background: rgba(255, 107, 53, 0.95);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+.notification-popup.theme-sunset .btn-primary {
+  background: linear-gradient(135deg, #ff6b35, #d84315);
+}
+
+.notification-popup.theme-sunset .btn-primary:hover {
+  background: linear-gradient(135deg, #d84315, #b8360e);
+}
+
+/* Midnight Purple Theme */
+.notification-popup.theme-midnight .notification-content {
+  background: rgba(74, 20, 140, 0.95);
+  border: 1px solid rgba(150, 100, 220, 0.2);
+}
+
+.notification-popup.theme-midnight .btn-primary {
+  background: linear-gradient(135deg, #4a148c, #1a0033);
+}
+
+.notification-popup.theme-midnight .btn-primary:hover {
+  background: linear-gradient(135deg, #1a0033, #0d0019);
 }

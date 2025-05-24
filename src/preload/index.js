@@ -34,6 +34,14 @@ const api = {
     ipcRenderer.removeListener('notification-data', callback)
   },
 
+  // Theme change listeners
+  onThemeChanged: (callback) => {
+    ipcRenderer.on('theme-changed', callback)
+  },
+  removeThemeChangedListener: (callback) => {
+    ipcRenderer.removeListener('theme-changed', callback)
+  },
+
   // Notification actions
   startBreakNow: () => ipcRenderer.invoke('start-break-now'),
   addTime: (seconds) => ipcRenderer.invoke('add-time', seconds),

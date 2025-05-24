@@ -328,6 +328,14 @@ function createBreakWindow() {
     // Add event listeners for debugging
     breakWin.webContents.on('did-finish-load', () => {
       console.log(`Break window ${index} finished loading`)
+
+      // Send current theme to this break window once it has loaded
+      console.log(`Sending current theme to break window ${index}:`, config.theme)
+      try {
+        breakWin.webContents.send('theme-changed', { theme: config.theme })
+      } catch (error) {
+        console.error(`Error sending theme to break window ${index}:`, error)
+      }
     })
 
     breakWin.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -540,12 +548,24 @@ function startBreak() {
 
   createBreakWindow()
 
-  // Show all break windows
-  breakWindows.forEach((window) => {
+  // Show all break windows and ensure they have the current theme
+  breakWindows.forEach((window, index) => {
     if (window && !window.isDestroyed()) {
       window.show()
       window.focus()
       window.setAlwaysOnTop(true, 'screen-saver')
+
+      // Ensure this window has the current theme
+      console.log(`Ensuring break window ${index} has current theme:`, config.theme)
+      setTimeout(() => {
+        try {
+          if (!window.isDestroyed()) {
+            window.webContents.send('theme-changed', { theme: config.theme })
+          }
+        } catch (error) {
+          console.error(`Error ensuring theme for break window ${index}:`, error)
+        }
+      }, 500) // Small delay to ensure window is ready
     }
   })
 
@@ -844,6 +864,64 @@ function getWorkTimeRemaining() {
   return remaining
 }
 
+// Function to broadcast theme changes to all windows
+function broadcastThemeChange(theme) {
+  console.log('=== BROADCASTING THEME CHANGE ===')
+  console.log('New theme:', theme)
+
+  // Send to main window
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    console.log('Sending theme change to main window')
+    try {
+      if (mainWindow.webContents.isLoading()) {
+        mainWindow.webContents.once('did-finish-load', () => {
+          mainWindow.webContents.send('theme-changed', { theme })
+        })
+      } else {
+        mainWindow.webContents.send('theme-changed', { theme })
+      }
+    } catch (error) {
+      console.error('Error sending theme change to main window:', error)
+    }
+  }
+
+  // Send to all break windows
+  breakWindows.forEach((window, index) => {
+    if (window && !window.isDestroyed()) {
+      console.log(`Sending theme change to break window ${index}`)
+      try {
+        if (window.webContents.isLoading()) {
+          // If window is still loading, wait for it to finish
+          window.webContents.once('did-finish-load', () => {
+            console.log(`Delayed theme send to break window ${index}`)
+            window.webContents.send('theme-changed', { theme })
+          })
+        } else {
+          window.webContents.send('theme-changed', { theme })
+        }
+      } catch (error) {
+        console.error(`Error sending theme change to break window ${index}:`, error)
+      }
+    }
+  })
+
+  // Send to notification window
+  if (notificationWindow && !notificationWindow.isDestroyed()) {
+    console.log('Sending theme change to notification window')
+    try {
+      if (notificationWindow.webContents.isLoading()) {
+        notificationWindow.webContents.once('did-finish-load', () => {
+          notificationWindow.webContents.send('theme-changed', { theme })
+        })
+      } else {
+        notificationWindow.webContents.send('theme-changed', { theme })
+      }
+    } catch (error) {
+      console.error('Error sending theme change to notification window:', error)
+    }
+  }
+}
+
 // IPC Handlers
 ipcMain.handle('get-config', () => {
   return config
@@ -897,12 +975,21 @@ ipcMain.handle('save-config', (_, newConfig) => {
     }
 
     // Validate theme
-    if (newConfig.theme !== undefined && !['light', 'dark', 'auto'].includes(newConfig.theme)) {
+    if (
+      newConfig.theme !== undefined &&
+      !['light', 'dark', 'auto', 'ocean', 'forest', 'sunset', 'midnight'].includes(newConfig.theme)
+    ) {
       newConfig.theme = defaultConfig.theme
     }
 
     config = { ...config, ...newConfig }
     saveConfig()
+
+    // Broadcast theme change to all windows if theme changed
+    if (oldConfig.theme !== config.theme) {
+      console.log('Theme changed from', oldConfig.theme, 'to', config.theme)
+      broadcastThemeChange(config.theme)
+    }
 
     console.log('=== CONFIG SAVED ===')
     console.log('Old work duration:', oldConfig.workDuration / (60 * 1000), 'minutes')

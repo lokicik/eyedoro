@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import PropTypes from 'prop-types'
 import './SettingsScreen.css'
 
-function SettingsScreen() {
+function SettingsScreen({ onThemeChange = null }) {
   const [config, setConfig] = useState({
     workDuration: 20,
     breakDuration: 5,
@@ -22,6 +23,8 @@ function SettingsScreen() {
 
   const saveTimeoutRef = useRef(null)
   const hasUnsavedChangesRef = useRef(false)
+  const isReceivingIPCThemeRef = useRef(false) // Flag to track IPC theme changes
+  const pendingThemeRef = useRef(null) // Track which theme is pending save
 
   useEffect(() => {
     loadConfig()
@@ -83,6 +86,11 @@ function SettingsScreen() {
   const debouncedSave = (newConfig) => {
     hasUnsavedChangesRef.current = true
 
+    // Track if this is a theme change
+    if (newConfig.theme !== config.theme) {
+      pendingThemeRef.current = newConfig.theme
+    }
+
     // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
@@ -91,29 +99,54 @@ function SettingsScreen() {
     // Set new timeout for auto-save
     saveTimeoutRef.current = setTimeout(() => {
       saveConfig(newConfig)
+      pendingThemeRef.current = null // Clear pending theme after save
     }, 2000) // Auto-save after 2 seconds of no changes
   }
 
   const handleInputChange = (key, value) => {
     const newConfig = { ...config, [key]: value }
+
+    console.log(
+      'Settings handleInputChange:',
+      key,
+      value,
+      'isReceivingIPC:',
+      isReceivingIPCThemeRef.current
+    )
+
     setConfig(newConfig)
 
-    // Dispatch immediate theme change event for break screen
-    if (key === 'theme') {
+    // Immediately notify parent component about theme change (for embedded settings)
+    if (key === 'theme' && onThemeChange && !isReceivingIPCThemeRef.current) {
+      console.log('Immediately notifying parent about theme change:', value)
+      onThemeChange(value)
+    }
+
+    // Only dispatch theme change event if this is NOT coming from IPC
+    if (key === 'theme' && !isReceivingIPCThemeRef.current) {
       console.log('Settings screen dispatching theme change:', value)
       const themeChangeEvent = new CustomEvent('themeChange', {
         detail: { theme: value }
       })
       window.dispatchEvent(themeChangeEvent)
+    } else if (key === 'theme' && isReceivingIPCThemeRef.current) {
+      console.log('Skipping theme dispatch - change came from IPC')
     }
 
-    // For duration changes, save immediately to restart timer
-    if (key === 'workDuration' || key === 'breakDuration') {
-      console.log('Duration changed, saving immediately:', key, value)
-      saveConfig(newConfig)
+    // For duration changes and theme changes, save immediately to prevent race conditions
+    if (key === 'workDuration' || key === 'breakDuration' || key === 'theme') {
+      console.log('Saving immediately for:', key, value)
+      if (!isReceivingIPCThemeRef.current) {
+        saveConfig(newConfig)
+      }
     } else {
-      // For other settings, use debounced save
-      debouncedSave(newConfig)
+      // For other settings, use debounced save (but not if this is from IPC)
+      if (!isReceivingIPCThemeRef.current) {
+        console.log('Using debounced save for:', key, value)
+        debouncedSave(newConfig)
+      } else {
+        console.log('Skipping debounced save - change came from IPC')
+      }
     }
   }
 
@@ -222,6 +255,57 @@ function SettingsScreen() {
       return () => mediaQuery.removeEventListener('change', handleThemeChange)
     }
   }, [config.theme])
+
+  // Listen for theme changes from main process (IPC)
+  useEffect(() => {
+    const handleThemeChangedIPC = (event, data) => {
+      console.log('Settings screen received theme change from IPC:', data.theme)
+      console.log('Current pending theme:', pendingThemeRef.current)
+
+      // Set the flag to indicate that this is coming from IPC
+      isReceivingIPCThemeRef.current = true
+
+      // Update config state WITHOUT triggering any saves or debounced operations
+      // This is just to keep the UI in sync - the config was already saved by the originating window
+      setConfig((prev) => ({ ...prev, theme: data.theme }))
+
+      // Only clear pending debounced saves if they match the incoming theme
+      // This prevents newer theme selections from being cancelled by older IPC messages
+      if (saveTimeoutRef.current && pendingThemeRef.current === data.theme) {
+        console.log('Clearing matching pending save for theme:', data.theme)
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+        pendingThemeRef.current = null
+      } else if (pendingThemeRef.current && pendingThemeRef.current !== data.theme) {
+        console.log(
+          'Keeping pending save for newer theme:',
+          pendingThemeRef.current,
+          'vs IPC:',
+          data.theme
+        )
+      }
+
+      // Reset the unsaved changes flag since this change came from another window that already saved
+      hasUnsavedChangesRef.current = false
+
+      // Reset the IPC flag after a short delay to allow state update to complete
+      setTimeout(() => {
+        isReceivingIPCThemeRef.current = false
+      }, 100)
+    }
+
+    // Listen for IPC theme changes
+    if (window.api?.onThemeChanged) {
+      window.api.onThemeChanged(handleThemeChangedIPC)
+    }
+
+    return () => {
+      // Remove IPC listener
+      if (window.api?.removeThemeChangedListener) {
+        window.api.removeThemeChangedListener(handleThemeChangedIPC)
+      }
+    }
+  }, [])
 
   // Get save status text
   const getSaveStatusText = () => {
@@ -409,6 +493,10 @@ function SettingsScreen() {
       </div>
     </div>
   )
+}
+
+SettingsScreen.propTypes = {
+  onThemeChange: PropTypes.func
 }
 
 export default SettingsScreen
