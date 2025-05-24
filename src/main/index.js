@@ -32,7 +32,7 @@ const defaultConfig = {
   breakDuration: 5 * 60 * 1000, // 5 minutes in milliseconds
   notifyBeforeBreak: true,
   soundEnabled: true,
-  darkMode: false,
+  theme: 'light', // Replaced darkMode with theme: 'light', 'dark', 'auto'
   autoStart: false
 }
 
@@ -46,7 +46,21 @@ function loadConfig() {
   try {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8')
-      config = { ...defaultConfig, ...JSON.parse(data) }
+      const loadedConfig = JSON.parse(data)
+
+      // Migration: convert old darkMode to new theme system
+      if (loadedConfig.darkMode !== undefined && loadedConfig.theme === undefined) {
+        loadedConfig.theme = loadedConfig.darkMode ? 'dark' : 'light'
+        delete loadedConfig.darkMode
+        console.log('Migrated darkMode to theme system:', loadedConfig.theme)
+      }
+
+      config = { ...defaultConfig, ...loadedConfig }
+
+      // Save the migrated config
+      if (loadedConfig.darkMode !== undefined) {
+        saveConfig()
+      }
     }
   } catch (error) {
     console.error('Error loading config:', error)
@@ -528,6 +542,23 @@ function endBreak() {
     config.workDuration / (60 * 1000),
     'minutes'
   )
+
+  // Safety check: prevent invalid work durations
+  if (config.workDuration < 60000) {
+    // Less than 1 minute
+    console.error('ERROR: Invalid work duration detected:', config.workDuration, 'ms')
+    console.log('Reloading config to fix corrupted settings...')
+    loadConfig()
+    console.log('Config reloaded. New work duration:', config.workDuration / (60 * 1000), 'minutes')
+
+    // If still invalid after reload, use default
+    if (config.workDuration < 60000) {
+      console.log('Config still invalid, using default work duration')
+      config.workDuration = defaultConfig.workDuration
+      saveConfig()
+    }
+  }
+
   startWorkTimer()
 }
 
@@ -606,7 +637,58 @@ function updateTrayMenu() {
       label: 'Quit',
       type: 'normal',
       click: () => {
+        console.log('=== QUIT BUTTON CLICKED ===')
+
+        // Set quitting flag
         app.isQuiting = true
+
+        // Clear all timers
+        if (workTimer) {
+          clearTimeout(workTimer)
+          workTimer = null
+        }
+        if (breakTimer) {
+          clearTimeout(breakTimer)
+          breakTimer = null
+        }
+        if (notificationTimer) {
+          clearTimeout(notificationTimer)
+          notificationTimer = null
+        }
+
+        // Close all break windows
+        breakWindows.forEach((window, index) => {
+          if (window && !window.isDestroyed()) {
+            try {
+              console.log('Closing break window', index, 'on quit')
+              window.destroy()
+            } catch (error) {
+              console.error('Error closing break window on quit:', error)
+            }
+          }
+        })
+        breakWindows = []
+
+        // Close main window
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          try {
+            console.log('Closing main window on quit')
+            mainWindow.destroy()
+          } catch (error) {
+            console.error('Error closing main window on quit:', error)
+          }
+        }
+
+        // Destroy tray
+        if (tray) {
+          try {
+            tray.destroy()
+          } catch (error) {
+            console.error('Error destroying tray on quit:', error)
+          }
+        }
+
+        console.log('Quitting application...')
         app.quit()
       }
     }
@@ -671,6 +753,18 @@ ipcMain.handle('get-config', () => {
 
 ipcMain.handle('save-config', (_, newConfig) => {
   const oldConfig = { ...config }
+
+  // Validate work and break durations before saving
+  if (newConfig.workDuration && newConfig.workDuration < 60000) {
+    console.error('Invalid work duration received:', newConfig.workDuration, 'ms. Using default.')
+    newConfig.workDuration = defaultConfig.workDuration
+  }
+
+  if (newConfig.breakDuration && newConfig.breakDuration < 30000) {
+    console.error('Invalid break duration received:', newConfig.breakDuration, 'ms. Using default.')
+    newConfig.breakDuration = defaultConfig.breakDuration
+  }
+
   config = { ...config, ...newConfig }
   saveConfig()
 
@@ -832,11 +926,51 @@ app.whenReady().then(() => {
 
 // Prevent app from quitting when windows are closed
 app.on('window-all-closed', (event) => {
-  if (!app.isQuiting) {
+  console.log('=== WINDOW ALL CLOSED EVENT ===')
+  console.log('app.isQuiting:', app.isQuiting)
+  console.log('Platform:', process.platform)
+
+  // On macOS, apps typically stay open even when all windows are closed
+  if (process.platform === 'darwin' && !app.isQuiting) {
     event.preventDefault()
+    return
+  }
+
+  // On other platforms, only prevent quit if not explicitly quitting
+  if (!app.isQuiting) {
+    console.log('Preventing quit - app still running in background')
+    event.preventDefault()
+  } else {
+    console.log('Allowing app to quit')
   }
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  console.log('=== BEFORE QUIT EVENT ===')
+  console.log('app.isQuiting:', app.isQuiting)
+
+  // If not already quitting, do cleanup
+  if (!app.isQuiting) {
+    console.log('Starting quit cleanup process...')
+    app.isQuiting = true
+
+    // Clear all timers
+    if (workTimer) clearTimeout(workTimer)
+    if (breakTimer) clearTimeout(breakTimer)
+    if (notificationTimer) clearTimeout(notificationTimer)
+
+    // Close break windows
+    breakWindows.forEach((window) => {
+      if (window && !window.isDestroyed()) {
+        try {
+          window.destroy()
+        } catch (error) {
+          console.error('Error destroying break window on quit:', error)
+        }
+      }
+    })
+  }
+
   globalShortcut.unregisterAll()
+  console.log('Quit cleanup completed')
 })

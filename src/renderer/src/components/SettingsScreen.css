@@ -245,6 +245,88 @@
   opacity: 0.8;
 }
 
+.theme-selector-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.theme-selector-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.theme-selector {
+  width: 100%;
+  padding: 12px 40px 12px 15px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.theme-selector::-ms-expand {
+  display: none;
+}
+
+.theme-selector:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.theme-selector:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+  transform: translateY(-1px);
+}
+
+.settings-container.dark .theme-selector-wrapper::after {
+  border-top-color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-container.dark .theme-selector {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.settings-container.dark .theme-selector:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+.theme-selector option {
+  background: #ffffff;
+  color: #333;
+  padding: 10px;
+  font-weight: 500;
+  border: none;
+}
+
+.settings-container.dark .theme-selector option {
+  background: #2a2a2a;
+  color: #f0f0f0;
+}
+
 .checkbox-item {
   display: flex;
   align-items: center;
@@ -332,35 +414,6 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.save-button {
-  background: linear-gradient(135deg, #4caf50, #45a049);
-  color: white;
-  border: none;
-  padding: 12px 35px;
-  border-radius: 20px;
-  font-size: 1em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-  min-width: 140px;
-}
-
-.save-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-}
-
-.save-button:active {
-  transform: translateY(0);
-}
-
-.save-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
 .help-text {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -413,12 +466,6 @@
     gap: 10px;
   }
 
-  .save-button {
-    padding: 10px 25px;
-    font-size: 0.95em;
-    min-width: 120px;
-  }
-
   .help-text {
     font-size: 0.8em;
     padding: 10px;
@@ -430,12 +477,6 @@
     margin-top: 8px;
     padding: 8px;
     gap: 8px;
-  }
-
-  .save-button {
-    padding: 8px 20px;
-    font-size: 0.9em;
-    min-width: 100px;
   }
 
   .help-text {
@@ -590,4 +631,132 @@
     margin: 20px auto;
     font-size: 1em;
   }
+}
+
+/* Additional Theme Variants */
+
+/* Ocean Blue Theme */
+.settings-container.theme-ocean {
+  background: linear-gradient(135deg, #0077be 0%, #005c96 100%);
+}
+
+.settings-container.theme-ocean .settings-header {
+  background: rgba(0, 150, 200, 0.2);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.settings-container.theme-ocean .setting-group {
+  background: rgba(0, 150, 200, 0.15);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.settings-container.theme-ocean .settings-footer {
+  background: rgba(0, 120, 180, 0.2);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.settings-container.theme-ocean .help-text {
+  background: rgba(0, 120, 180, 0.2);
+  border: 1px solid rgba(0, 200, 255, 0.1);
+}
+
+/* Forest Green Theme */
+.settings-container.theme-forest {
+  background: linear-gradient(135deg, #2d5016 0%, #1a3009 100%);
+}
+
+.settings-container.theme-forest .settings-header {
+  background: rgba(80, 150, 50, 0.2);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+.settings-container.theme-forest .setting-group {
+  background: rgba(80, 150, 50, 0.15);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+.settings-container.theme-forest .settings-footer {
+  background: rgba(60, 130, 40, 0.2);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+.settings-container.theme-forest .help-text {
+  background: rgba(60, 130, 40, 0.2);
+  border: 1px solid rgba(100, 180, 60, 0.1);
+}
+
+/* Sunset Orange Theme */
+.settings-container.theme-sunset {
+  background: linear-gradient(135deg, #ff6b35 0%, #d84315 100%);
+}
+
+.settings-container.theme-sunset .settings-header {
+  background: rgba(255, 140, 80, 0.2);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+.settings-container.theme-sunset .setting-group {
+  background: rgba(255, 140, 80, 0.15);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+.settings-container.theme-sunset .settings-footer {
+  background: rgba(255, 120, 60, 0.2);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+.settings-container.theme-sunset .help-text {
+  background: rgba(255, 120, 60, 0.2);
+  border: 1px solid rgba(255, 160, 100, 0.1);
+}
+
+/* Midnight Purple Theme */
+.settings-container.theme-midnight {
+  background: linear-gradient(135deg, #4a148c 0%, #1a0033 100%);
+}
+
+.settings-container.theme-midnight .settings-header {
+  background: rgba(120, 80, 200, 0.2);
+  border: 1px solid rgba(150, 100, 220, 0.2);
+}
+
+.settings-container.theme-midnight .setting-group {
+  background: rgba(120, 80, 200, 0.15);
+  border: 1px solid rgba(150, 100, 220, 0.2);
+}
+
+.settings-container.theme-midnight .settings-footer {
+  background: rgba(100, 60, 180, 0.2);
+  border: 1px solid rgba(150, 100, 220, 0.2);
+}
+
+.settings-container.theme-midnight .help-text {
+  background: rgba(100, 60, 180, 0.2);
+  border: 1px solid rgba(150, 100, 220, 0.1);
+}
+
+/* Theme selector improvements for all theme variants */
+.settings-container.theme-ocean .theme-selector,
+.settings-container.theme-forest .theme-selector,
+.settings-container.theme-sunset .theme-selector,
+.settings-container.theme-midnight .theme-selector {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.settings-container.theme-ocean .theme-selector:hover,
+.settings-container.theme-forest .theme-selector:hover,
+.settings-container.theme-sunset .theme-selector:hover,
+.settings-container.theme-midnight .theme-selector:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.save-status {
+  margin-top: 10px;
+  font-size: 0.9em;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  text-align: center;
+  font-weight: 500;
 }

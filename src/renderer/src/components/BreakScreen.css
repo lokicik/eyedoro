@@ -137,6 +137,13 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: slideInTip 0.6s ease-out;
   transition: transform 0.3s ease;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
 }
 
 @keyframes slideInTip {
@@ -189,6 +196,11 @@
   margin: 0;
   opacity: 0.95;
   font-weight: 300;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  max-height: 80px;
+  overflow: hidden;
 }
 
 .tip-indicator {
@@ -227,6 +239,10 @@
 .break-controls {
   margin-top: 30px;
   text-align: center;
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
 }
 .end-break-button {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -401,4 +417,319 @@ button,
 .end-break-button {
   cursor: pointer !important;
   position: relative;
+}
+
+/* Dark Mode Styles */
+.break-screen.dark-mode .break-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 20, 20, 0.95) 0%,
+    rgba(40, 40, 40, 0.95) 35%,
+    rgba(30, 30, 30, 0.95) 100%
+  );
+}
+
+.break-screen.dark-mode .break-header h1,
+.break-screen.dark-mode .break-header p,
+.break-screen.dark-mode .time-remaining,
+.break-screen.dark-mode .time-label,
+.break-screen.dark-mode .tip-title,
+.break-screen.dark-mode .tip-description,
+.break-screen.dark-mode .exercise-suggestions h4,
+.break-screen.dark-mode .exercise-suggestions li,
+.break-screen.dark-mode .emergency-text,
+.break-screen.dark-mode .progress-text {
+  color: #f0f0f0;
+}
+
+.break-screen.dark-mode .tip-card {
+  background: rgba(40, 40, 40, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.break-screen.dark-mode .tip-card:hover {
+  background: rgba(50, 50, 50, 0.5);
+}
+
+.break-screen.dark-mode .exercise-suggestions {
+  background: rgba(40, 40, 40, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.break-screen.dark-mode .exercise-suggestions li {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.break-screen.dark-mode .tip-dot {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.break-screen.dark-mode .tip-dot:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.break-screen.dark-mode .tip-dot.active {
+  background: #f0f0f0;
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.break-screen.dark-mode .progress-bar {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.break-screen.dark-mode .emergency-text kbd {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f0f0f0;
+}
+
+.break-screen.dark-mode .end-break-button {
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.break-screen.dark-mode .end-break-button:hover {
+  background: linear-gradient(135deg, #b71c1c, #a11e1e);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.break-screen.dark-mode .timer-svg circle:first-child {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.break-screen.dark-mode .timer-svg .timer-progress {
+  stroke: #66bb6a;
+}
+
+/* Break Settings Integration */
+.break-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  position: relative;
+}
+
+.settings-button {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 25px;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.settings-button:hover {
+  background: linear-gradient(135deg, #2980b9, #2471a3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.settings-button:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
+.break-settings-container {
+  width: 100%;
+  max-width: 1200px;
+  height: 80vh;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.break-settings-header {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.back-to-break-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.back-to-break-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.back-to-break-button:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
+.settings-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Dark mode styles for settings integration */
+.break-screen.dark-mode .settings-button {
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.break-screen.dark-mode .settings-button:hover {
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.break-screen.dark-mode .back-to-break-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.break-screen.dark-mode .back-to-break-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.break-screen.dark-mode .settings-wrapper {
+  background: rgba(40, 40, 40, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Additional Theme Variants for Break Screen */
+
+/* Ocean Blue Theme */
+.break-screen.theme-ocean .break-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 119, 190, 0.95) 0%,
+    rgba(0, 92, 150, 0.95) 35%,
+    rgba(0, 70, 120, 0.95) 100%
+  );
+}
+
+.break-screen.theme-ocean .tip-card {
+  background: rgba(0, 150, 200, 0.2);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.break-screen.theme-ocean .tip-card:hover {
+  background: rgba(0, 170, 220, 0.3);
+}
+
+.break-screen.theme-ocean .exercise-suggestions {
+  background: rgba(0, 120, 180, 0.2);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+.break-screen.theme-ocean .settings-wrapper {
+  background: rgba(0, 120, 180, 0.2);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+/* Forest Green Theme */
+.break-screen.theme-forest .break-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(45, 80, 22, 0.95) 0%,
+    rgba(26, 48, 9, 0.95) 35%,
+    rgba(20, 40, 10, 0.95) 100%
+  );
+}
+
+.break-screen.theme-forest .tip-card {
+  background: rgba(80, 150, 50, 0.2);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+.break-screen.theme-forest .tip-card:hover {
+  background: rgba(100, 170, 70, 0.3);
+}
+
+.break-screen.theme-forest .exercise-suggestions {
+  background: rgba(60, 130, 40, 0.2);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+.break-screen.theme-forest .settings-wrapper {
+  background: rgba(60, 130, 40, 0.2);
+  border: 1px solid rgba(100, 180, 60, 0.2);
+}
+
+/* Sunset Orange Theme */
+.break-screen.theme-sunset .break-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 53, 0.95) 0%,
+    rgba(216, 67, 21, 0.95) 35%,
+    rgba(180, 50, 15, 0.95) 100%
+  );
+}
+
+.break-screen.theme-sunset .tip-card {
+  background: rgba(255, 140, 80, 0.2);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+.break-screen.theme-sunset .tip-card:hover {
+  background: rgba(255, 160, 100, 0.3);
+}
+
+.break-screen.theme-sunset .exercise-suggestions {
+  background: rgba(255, 120, 60, 0.2);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+.break-screen.theme-sunset .settings-wrapper {
+  background: rgba(255, 120, 60, 0.2);
+  border: 1px solid rgba(255, 160, 100, 0.2);
+}
+
+/* Midnight Purple Theme */
+.break-screen.theme-midnight .break-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(74, 20, 140, 0.95) 0%,
+    rgba(26, 0, 51, 0.95) 35%,
+    rgba(20, 0, 40, 0.95) 100%
+  );
+}
+
+.break-screen.theme-midnight .tip-card {
+  background: rgba(120, 80, 200, 0.2);
+  border: 1px solid rgba(150, 100, 220, 0.2);
+}
+
+.break-screen.theme-midnight .tip-card:hover {
+  background: rgba(140, 100, 220, 0.3);
+}
+
+.break-screen.theme-midnight .exercise-suggestions {
+  background: rgba(100, 60, 180, 0.2);
+  border: 1px solid rgba(150, 100, 220, 0.2);
+}
+
+.break-screen.theme-midnight .settings-wrapper {
+  background: rgba(100, 60, 180, 0.2);
+  border: 1px solid rgba(150, 100, 220, 0.2);
 }
