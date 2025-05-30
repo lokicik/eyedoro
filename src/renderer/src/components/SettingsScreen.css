@@ -478,6 +478,19 @@
   transform: rotate(45deg);
 }
 
+.setting-description {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 8px;
+  margin-left: 32px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.settings-container.dark .setting-description {
+  color: rgba(255, 255, 255, 0.6);
+}
+
 .settings-footer {
   grid-column: 1 / -1;
   margin-top: 15px;

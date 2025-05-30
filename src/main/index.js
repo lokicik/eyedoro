@@ -35,7 +35,8 @@ const defaultConfig = {
   notificationTiming: 30, // seconds before break to show notification (5-60 range)
   soundEnabled: true,
   theme: 'light', // Replaced darkMode with theme: 'light', 'dark', 'auto'
-  autoStart: false
+  autoStart: false,
+  minimalBreakScreen: false
 }
 
 let config = { ...defaultConfig }

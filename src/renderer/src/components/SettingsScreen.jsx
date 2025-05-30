@@ -10,7 +10,8 @@ function SettingsScreen({ onThemeChange = null }) {
     notificationTiming: 30, // seconds before break to show notification
     soundEnabled: true,
     theme: 'light',
-    autoStart: false
+    autoStart: false,
+    minimalBreakScreen: false
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -46,7 +47,8 @@ function SettingsScreen({ onThemeChange = null }) {
         notificationTiming: savedConfig.notificationTiming || 30, // default to 30 seconds if not set
         soundEnabled: savedConfig.soundEnabled,
         theme: savedConfig.theme || (savedConfig.darkMode ? 'dark' : 'light'),
-        autoStart: savedConfig.autoStart
+        autoStart: savedConfig.autoStart,
+        minimalBreakScreen: savedConfig.minimalBreakScreen || false
       }
       setConfig(processedConfig)
       setLastSaved(new Date())
@@ -140,7 +142,8 @@ function SettingsScreen({ onThemeChange = null }) {
       key === 'workDuration' ||
       key === 'breakDuration' ||
       key === 'theme' ||
-      key === 'notificationTiming'
+      key === 'notificationTiming' ||
+      key === 'minimalBreakScreen'
     ) {
       console.log('Saving immediately for:', key, value)
       if (!isReceivingIPCThemeRef.current) {
@@ -489,6 +492,21 @@ function SettingsScreen({ onThemeChange = null }) {
                 <option value="sunset">🌇 Sunset Orange</option>
                 <option value="midnight">🌃 Midnight Purple</option>
               </select>
+            </div>
+          </div>
+
+          <div className="setting-item checkbox-item">
+            <label>
+              <input
+                type="checkbox"
+                checked={config.minimalBreakScreen}
+                onChange={(e) => handleInputChange('minimalBreakScreen', e.target.checked)}
+              />
+              <span className="checkmark"></span>
+              Use minimal break screen design
+            </label>
+            <div className="setting-description">
+              Show a clean, simple break screen with just the essential information
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './BreakScreen.css'
 import SettingsScreen from './SettingsScreen'
+import MinimalBreakScreen from './MinimalBreakScreen'
 
 function BreakScreen() {
   const [timeRemaining, setTimeRemaining] = useState(300) // 5 minutes default
@@ -8,6 +9,7 @@ function BreakScreen() {
   const [currentTip, setCurrentTip] = useState(0)
   const [theme, setTheme] = useState('light') // Changed from isDarkMode to theme
   const [showSettings, setShowSettings] = useState(false)
+  const [isMinimalMode, setIsMinimalMode] = useState(false)
   const timerRef = useRef(null)
   const tipTimerRef = useRef(null)
 
@@ -189,6 +191,9 @@ function BreakScreen() {
         const initialTheme = config.theme || (config.darkMode ? 'dark' : 'light') // Handle migration from old darkMode
         console.log('Break screen: Setting initial theme to:', initialTheme)
         setTheme(initialTheme)
+
+        // Get minimal break screen setting
+        setIsMinimalMode(config.minimalBreakScreen || false)
       } catch (error) {
         console.error('Error getting break time or config:', error)
       }
@@ -250,6 +255,11 @@ function BreakScreen() {
   }
 
   const progressPercentage = ((totalBreakTime - timeRemaining) / totalBreakTime) * 100
+
+  // If minimal mode is enabled, render the minimal break screen
+  if (isMinimalMode) {
+    return <MinimalBreakScreen />
+  }
 
   return (
     <div className={`break-screen ${getThemeClasses()}`}>
